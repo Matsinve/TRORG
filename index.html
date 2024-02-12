@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: cdvfile: https://ssl.gstatic.com 'unsafe-eval' 'unsafe-inline';">
+   
+  <title>Test Result Organizer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/vfs_fonts.js"></script>
+</head>
+<body>
+  <h1>Test Result Organizer</h1>
+
+  <h2>Add Student</h2>
+  <div>
+    <label>Date:</label>
+    <input type="date" id="date" required><br>
+
+    <label>Term:</label>
+    <input type="text" id="term" required><br>
+
+    <label>Subject:</label>
+    <input type="text" id="subject" required><br>
+
+    <label>Test Type:</label>
+    <input type="text" id="testType" required><br>
+
+    <label>Name:</label>
+    <input type="text" id="name" required><br>
+
+    <label>Gender:</label>
+    <input type="text" id="gender" required><br>
+
+    <label>Marks:</label>
+    <input type="number" id="marks" required><br>
+
+    <button onclick="addStudent()">Add Student</button>
+  </div>
+
+  <h2>Students Table</h2>
+  <table id="studentsTable" border="1">
+    <thead>
+      <tr>
+        <th>Number</th>
+        <th>Name</th>
+        <th>Gender</th>
+        <th>Marks</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="studentBody">
+    </tbody>
+  </table>
+
+  <h2>Frequency Table</h2>
+  <table id="frequencyTable" border="1">
+    <thead>
+      <tr>
+        <th>Range</th>
+        <th>Frequency</th>
+        <th>Cumulative Frequency</th>
+        <th>Percentage Frequency</th>
+      </tr>
+    </thead>
+    <tbody id="frequencyBody">
+    </tbody>
+  </table>
+
+  <h2>Statistics</h2>
+  <div>
+    <label>Standard Deviation:</label>
+    <input type="text" id="standardDeviation" readonly><br>
+
+    <label>Mean Marks:</label>
+    <input type="text" id="meanMarks" readonly><br>
+
+    <label>Mode:</label>
+    <input type="text" id="mode" readonly><br>
+
+    <label>Median:</label>
+    <input type="text" id="median" readonly><br>
+  </div>
+
+  <button onclick="generatePDF()">Generate PDF</button>
+  <button onclick="deleteData()">Delete All Data</button>
+
+  <script>
+    // Array to store student data
+    let students = [];
+
+    // Function to add a student to the table
+    function addStudent() {
+      const date = document.getElementById("date").value;
+      const term = document.getElementById("term").value;
+      const subject = document.getElementById("subject").value;
+      const testType = document.getElementById("testType").value;
+      const name = document.getElementById("name").value;
+      const gender = document.getElementById("gender").value;
+      const marks = document.getElementById("marks").value;
+
+
+// Validate form fields
+if (name === "") {
+  displayPopup("Please enter a valid name");
+  return;
+}
+
+if (gender === "") {
+  displayPopup("Please select a gender");
+  return;
+}
+
+if (marks === "" || isNaN(marks) || marks < 0 || marks > 100) {
+  displayPopup("Please enter valid marks (between 0 and 100)");
+  return;
+}
+
+// Function to display pop-up message
+function displayPopup(message) {
+  // Create a <div> element for the pop-up
+  const popup = document.createElement("div");
+  popup.className = "popup";
+  
+  // Create a <p> element for the message
+  const messageElement = document.createElement("p");
+  messageElement.textContent = message;
+  
+  // Append the message to the pop-up
+  popup.appendChild(messageElement);
+  
+  // Style the pop-up
+  popup.style.position = "fixed";
+  popup.style.top = "50%";
+  popup.style.left = "50%";
+  popup.style.transform = "translate(-50%, -50%)";
+  popup.style.padding = "20px";
+  popup.style.background = "#fff";
+  popup.style.border = "2px solid #000";
+  popup.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.1)";
+  popup.style.maxWidth = "300px";
+  
+  // Append the pop-up to the body
+  document.body.appendChild(popup);
+  
+  // Remove the pop-up after 3 seconds
+  setTimeout(function() {
+    popup.remove();
+  }, 3000);
+}
+
+
+      const student = { date, term, subject, testType, name, gender, marks };
+      students.push(student);
+      updateTable();
+
+      // Save to local storage
+      localStorage.setItem("students", JSON.stringify(students));
+
+
+
+ // Clear the input fields
+  clearFields();
+}
+
+// Function to clear the input fields
+function clearFields() {
+  document.getElementById("name").value = "";
+  document.getElementById("gender").value = "";
+  document.getElementById("marks").value = "";
+}
+
+    // Function to update the students table
+    function updateTable() {
+      const table = document.getElementById("studentBody");
+      table.innerHTML = "";
+
+      students.sort((a, b) => b.marks - a.marks);
+      students.forEach((student, index) => {
+        const row = table.insertRow();
+        const numberCell = row.insertCell(0);
+        const nameCell = row.insertCell(1);
+        const genderCell = row.insertCell(2);
+        const marksCell = row.insertCell(3);
+        const actionCell = row.insertCell(4);
+
+        numberCell.innerText = index + 1;
+        nameCell.innerText = student.name;
+        genderCell.innerText = student.gender;
+        marksCell.innerText = student.marks;
+
+        const deleteButton = document.createElement("button");
+        deleteButton.innerText = "Delete";
+        deleteButton.onclick = () => deleteStudent(index);
+        actionCell.appendChild(deleteButton);
+
+        const editButton = document.createElement("button");
+        editButton.innerText = "Edit";
+        editButton.onclick = () => editStudent(index);
+        actionCell.appendChild(editButton);
+      });
+    }
+
+    // Function to delete a student from the table
+    function deleteStudent(index) {
+      students.splice(index, 1);
+      updateTable();
+      localStorage.setItem("students", JSON.stringify(students));
+    }
+
+    // Function to edit student details
+    function editStudent(index) {
+      const student = students[index];
+      document.getElementById("date").value = student.date;
+      document.getElementById("term").value = student.term;
+      document.getElementById("subject").value = student.subject;
+      document.getElementById("testType").value = student.testType;
+      document.getElementById("name").value = student.name;
+      document.getElementById("gender").value = student.gender;
+      document.getElementById("marks").value = student.marks;
+
+      deleteStudent(index);
+    }
+
+  
+  
+  
+// Function to generate the frequency table
+function generateFrequencyTable() {
+  const frequencyRanges = [
+    { min: 0, max: 10 },
+    { min: 11, max: 20 },
+    { min: 21, max: 30 },
+    { min: 31, max: 40 },
+    { min: 41, max: 50 },
+    { min: 51, max: 60 },
+    { min: 61, max: 70 },
+    { min: 71, max: 80 },
+    { min: 81, max: 90 },
+    { min: 91, max: 100 }
+  ];
+
+  const frequencyTable = document.getElementById("frequencyBody");
+  frequencyTable.innerHTML = "";
+
+  let cumulativeFrequency = 0;
+  const totalStudents = students.length; // Total number of students
+
+  for (let i = frequencyRanges.length - 1; i >= 0; i--) {
+    const range = frequencyRanges[i];
+    const rangeString = `${range.min}-${range.max}`;
+    const frequency = students.filter(
+      student => student.marks >= range.min && student.marks <= range.max
+    ).length;
+
+    cumulativeFrequency += frequency;
+
+    const percentageFrequency = (frequency / totalStudents) * 100; // Calculate the percentage frequency
+
+    const row = frequencyTable.insertRow();
+    const rangeCell = row.insertCell(0);
+    const frequencyCell = row.insertCell(1);
+    const cumulativeFrequencyCell = row.insertCell(2);
+    const percentageFrequencyCell = row.insertCell(3); // Add a new cell for percentage frequency
+
+    rangeCell.innerText = rangeString;
+    frequencyCell.innerText = frequency;
+    cumulativeFrequencyCell.innerText = cumulativeFrequency;
+    percentageFrequencyCell.innerText = percentageFrequency.toFixed(2); // Display percentage with 2 decimal places
+  }
+}
+
+
+
+
+
+
+
+    // Function to calculate statistics
+    function calculateStatistics() {
+      const marksArray = students.map(student => parseInt(student.marks));
+      const totalMarks = marksArray.reduce((acc, curr) => acc + curr, 0);
+      const mean = (totalMarks / students.length).toFixed(2);
+
+      const frequency = {};
+      let mode = null;
+      marksArray.forEach(marks => {
+        frequency[marks] = frequency[marks] ? frequency[marks] + 1 : 1;
+        if (!mode || frequency[marks] > frequency[mode]) {
+          mode = marks;
+        }
+      });
+
+      const sortedMarks = marksArray.sort((a, b) => a - b);
+      const middleIndex = Math.floor(sortedMarks.length / 2);
+      const median =
+        sortedMarks.length % 2 === 0
+          ? (sortedMarks[middleIndex - 1] + sortedMarks[middleIndex]) / 2
+          : sortedMarks[middleIndex];
+
+      let deviationSum = 0;
+      marksArray.forEach(marks => {
+        deviationSum += (marks - mean) ** 2;
+      });
+      const standardDeviation = Math.sqrt(deviationSum / students.length);
+
+      document.getElementById("standardDeviation").value = standardDeviation.toFixed(2);
+      document.getElementById("meanMarks").value = mean;
+      document.getElementById("mode").value = mode;
+      document.getElementById("median").value = median;
+    }
+
+    // Function to generate and download PDF
+    function generatePDF() {
+      generateFrequencyTable();
+      calculateStatistics();
+
+      const docDefinition = {
+        content: [
+          { text: "Test Result Organizer", style: "header" },
+          { text: "Date: " + document.getElementById("date").value },
+          { text: "Term: " + document.getElementById("term").value },
+          { text: "Subject: " + document.getElementById("subject").value },
+          { text: "Test Type: " + document.getElementById("testType").value },
+          { text: "\n" },
+          { text: "Students Table", style: "subheader" },
+          { table: { body: getStudentsTableData() }, style: "table" },
+          { text: "\n" },
+          { text: "Frequency Table", style: "subheader" },
+          { table: { body: getFrequencyTableData() }, style: "table" },
+          { text: "\n" },
+          { text: "Statistics", style: "subheader" },
+          { text: "Standard Deviation: " + document.getElementById("standardDeviation").value },
+          { text: "Mean Marks: " + document.getElementById("meanMarks").value },
+          { text: "Mode: " + document.getElementById("mode").value },
+          { text: "Median: " + document.getElementById("median").value }
+        ],
+        styles: {
+          header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] },
+          subheader: { fontSize: 14, bold: true, margin: [0, 10, 0, 5] },
+          table: { margin: [0, 5, 0, 15] }
+        }
+      };
+
+      pdfMake.createPdf(docDefinition).download("test_results.pdf");
+    }
+
+    // Helper function to get students table data for PDF
+    function getStudentsTableData() {
+      const headers = ["Number", "Name", "Gender", "Marks"];
+      const data = students.map((student, index) => [
+        index + 1,
+        student.name,
+        student.gender,
+        student.marks
+      ]);
+
+      return [headers, ...data];
+    }
+
+    // Helper function to get frequency table data for PDF
+    function getFrequencyTableData() {
+      const headers = ["Range", "Frequency", "Cumulative Frequency", "Percentage Frequency"];
+      const data = Array.from(document.getElementById("frequencyBody").rows).map(row =>
+        Array.from(row.cells).map(cell => cell.innerHTML)
+      );
+
+      return [headers, ...data];
+    }
+
+    // Function to delete all data from local storage
+    function deleteData() {
+      students = [];
+      updateTable();
+      localStorage.removeItem("students");
+    }
+
+    // Load data from local storage if available
+window.onload = function () {
+  const storedStudents = localStorage.getItem("students");
+  if (storedStudents) {
+    students = JSON.parse(storedStudents);
+    updateTable();
+  }
+
+  // Load input details into form fields
+  const lastStudent = students[students.length - 1]; // Get the latest stored student data
+  if (lastStudent) {
+    document.getElementById("date").value = lastStudent.date;
+    document.getElementById("term").value = lastStudent.term;
+    document.getElementById("subject").value = lastStudent.subject;
+    document.getElementById("testType").value = lastStudent.testType;
+  }
+};
+
+</script>   
+</body>
+</html>
